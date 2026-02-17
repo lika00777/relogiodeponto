@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0A0A0A;
+  --foreground: #EDEDED;
+  --accent: #00E5FF;
+  --card-bg: rgba(255, 255, 255, 0.03);
+  --border: rgba(255, 255, 255, 0.1);
+  --grid-color: #1A1A1A;
+}
+
+[data-theme='light'] {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --accent: #0284C7;
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --border: rgba(15, 23, 42, 0.1);
+  --grid-color: #E2E8F0;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom background pattern for depth */
+.bg-grid {
+  background-image: 
+    linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.text-glow-accent {
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.4), 0 0 20px rgba(0, 229, 255, 0.2);
+}
+
+[data-theme='light'] .text-glow-accent {
+  text-shadow: 0 0 10px rgba(2, 132, 199, 0.2);
+}
+
+.text-glow {
+  text-shadow: 0 0 15px rgba(237, 237, 237, 0.2);
+}
+
+.shadow-neon {
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.3), inset 0 0 10px rgba(0, 229, 255, 0.1);
+}
+
+@layer utilities {
+  .animate-slow-ping {
+    animation: ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 4px;
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 10px;
+  }
+  .custom-scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+}
