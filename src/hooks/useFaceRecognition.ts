@@ -12,36 +12,49 @@ export function useFaceRecognition() {
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadModels = async () => {
+      if (isFaceApiLoaded()) {
+        setIsModelLoaded(true);
+        return;
+      }
+
       try {
         await loadFaceApiModels();
-        setIsModelLoaded(true);
+        if (isMounted) setIsModelLoaded(true);
       } catch (err) {
         console.error('Error loading face-api models:', err);
-        setError('Falha ao carregar modelos de IA');
+        if (isMounted) setError('Falha ao carregar modelos de IA');
       }
     };
+
     loadModels();
 
-    // Cleanup on hook unmount
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
+      isMounted = false;
     };
   }, []);
 
   const startVideo = async () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || streamRef.current) return;
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' } 
+        video: { 
+          facingMode: 'user',
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        } 
       });
-      streamRef.current = stream;
-      videoRef.current.srcObject = stream;
+      
+      if (videoRef.current) {
+        streamRef.current = stream;
+        videoRef.current.srcObject = stream;
+      }
     } catch (err) {
       console.error('Camera access error:', err);
-      setError('Câmera não acessível');
+      setError('Câmera não acessível ou permissão negada');
     }
   };
 
@@ -49,7 +62,6 @@ export function useFaceRecognition() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
         track.stop();
-        console.log('Track stopped:', track.label);
       });
       streamRef.current = null;
     }
@@ -61,20 +73,27 @@ export function useFaceRecognition() {
   const getFaceDescriptor = async () => {
     if (!videoRef.current || !isModelLoaded) return null;
     
-    const detection = await faceapi
-      .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
-      .withFaceLandmarks()
-      .withFaceDescriptor();
+    try {
+      const detection = await faceapi
+        .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
+        .withFaceLandmarks()
+        .withFaceDescriptor();
 
-    return detection ? Array.from(detection.descriptor) : null;
+      return detection ? Array.from(detection.descriptor) : null;
+    } catch (err) {
+      console.error('Face detection error:', err);
+      return null;
+    }
   };
 
   const getSnapshot = () => {
-    if (!videoRef.current) return null;
+    if (!videoRef.current || videoRef.current.readyState < 2) return null;
+    
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext('2d');
+    
     if (ctx) {
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       return canvas.toDataURL('image/jpeg', 0.8);

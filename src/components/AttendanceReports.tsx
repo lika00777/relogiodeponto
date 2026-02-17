@@ -98,58 +98,55 @@ export default function AttendanceReports() {
   async function fetchData() {
     setLoading(true);
     
-    const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
-    const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
+    try {
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
-    // 1. Fetch Logs (Filtered)
-    let logQuery = supabase
-      .from('attendance_logs')
-      .select(`
-        *,
-        profiles (full_name, role),
-        locations (name)
-      `)
-      .gte('timestamp', startOfMonth)
-      .lte('timestamp', endOfMonth)
-      .order('timestamp', { ascending: false });
- 
-    if (filterType !== 'all') {
-      logQuery = logQuery.eq('type', filterType);
+      // Parallelize all data fetching for performance
+      const [logResponse, vacResponse, schResponse] = await Promise.all([
+        // 1. Fetch Logs (Filtered)
+        (() => {
+          let logQuery = supabase
+            .from('attendance_logs')
+            .select('*, profiles (full_name, role), locations (name)')
+            .gte('timestamp', startOfMonth)
+            .lte('timestamp', endOfMonth)
+            .order('timestamp', { ascending: false });
+          
+          if (filterType !== 'all') logQuery = logQuery.eq('type', filterType);
+          if (selectedEmpId) logQuery = logQuery.eq('user_id', selectedEmpId);
+          
+          return logQuery;
+        })(),
+
+        // 2. Fetch Vacations (Filtered)
+        (() => {
+          let vacQuery = supabase
+            .from('vacation_requests')
+            .select('*')
+            .eq('status', 'approved')
+            .or(`start_date.lte.${endOfMonth},end_date.gte.${startOfMonth}`);
+          
+          if (selectedEmpId) vacQuery = vacQuery.eq('user_id', selectedEmpId);
+          
+          return vacQuery;
+        })(),
+
+        // 3. Fetch Schedules
+        supabase.from('work_schedules').select('*')
+      ]);
+
+      if (logResponse.error) throw logResponse.error;
+
+      setLogs((logResponse.data as any) || []);
+      setVacations(vacResponse.data || []);
+      setSchedules(schResponse.data || []);
+    } catch (err: any) {
+      console.error('Erro ao carregar dados do relatório:', err);
+      // Aqui poderíamos ter um toast de erro
+    } finally {
+      setLoading(false);
     }
-
-    if (selectedEmpId) {
-      logQuery = logQuery.eq('user_id', selectedEmpId);
-    }
- 
-    const { data: logData, error: logError } = await logQuery;
-
-    if (logError) {
-      console.error('Erro ao carregar picagens:', logError);
-      alert(`ERRO: ${logError.message}`);
-    }
-    
-    // 2. Fetch Vacations (Filtered)
-    let vacQuery = supabase
-      .from('vacation_requests')
-      .select('*')
-      .eq('status', 'approved')
-      .or(`start_date.lte.${endOfMonth},end_date.gte.${startOfMonth}`); // Overlap logic
-
-    if (selectedEmpId) {
-      vacQuery = vacQuery.eq('user_id', selectedEmpId);
-    }
-
-    const { data: vacData } = await vacQuery;
-
-    // 3. Fetch Schedules
-    const { data: schData } = await supabase
-      .from('work_schedules')
-      .select('*');
-
-    setLogs((logData as any) || []);
-    setVacations(vacData || []);
-    setSchedules(schData || []);
-    setLoading(false);
   }
 
   return (

@@ -30,27 +30,45 @@ export async function identifyUserByFace(descriptor: number[]) {
 }
 
 /**
- * Compares two face descriptors (embeddings) and returns the euclidean distance.
+ * Compara dois descritores faciais (embeddings) e retorna se são um match.
  */
 export async function verifyFace(currentDescriptor: number[], savedDescriptor: any) {
-  // Garantir que o descritor salvo é um array de números (as vezes o pgvector retorna string)
-  let normalizedSaved = savedDescriptor;
-  if (typeof savedDescriptor === 'string') {
-    normalizedSaved = JSON.parse(savedDescriptor.replace('{', '[').replace('}', ']'));
-  } else if (!Array.isArray(savedDescriptor)) {
-    console.error('Descriptor salvo inválido:', savedDescriptor);
+  try {
+    // Normalização robusta: pgvector pode retornar string {1,2,3...} ou array [1,2,3...]
+    let normalizedSaved: number[] = [];
+    
+    if (typeof savedDescriptor === 'string') {
+      normalizedSaved = savedDescriptor
+        .replace(/[{}]/g, '')
+        .split(',')
+        .map(Number);
+    } else if (Array.isArray(savedDescriptor)) {
+      normalizedSaved = savedDescriptor.map(Number);
+    }
+
+    if (!normalizedSaved.length || currentDescriptor.length !== normalizedSaved.length) {
+      console.error(`Falha Crítica na Biometria: Divergência de dimensões.`);
+      return false;
+    }
+
+    const distance = faceapi.euclideanDistance(currentDescriptor, normalizedSaved);
+    
+    // Log de auditoria (em produção isso iria para uma tabela de logs)
+    console.log(`[Audit] Tentativa de Match: Distância=${distance.toFixed(4)}`);
+
+    // 0.45 é mais rígido que o padrão 0.6 do face-api, ideal para segurança
+    const THRESHOLD = 0.45;
+    const isMatch = distance < THRESHOLD;
+
+    if (!isMatch && distance < 0.6) {
+      console.warn(`[Security] Tentativa de match próxima ao limite: ${distance.toFixed(4)}`);
+    }
+
+    return isMatch;
+  } catch (err) {
+    console.error('Erro na validação facial:', err);
     return false;
   }
-
-  if (currentDescriptor.length !== normalizedSaved.length) {
-    console.error(`Divergência de tamanho: Atual(${currentDescriptor.length}) vs Salvo(${normalizedSaved.length})`);
-    return false;
-  }
-
-  const distance = faceapi.euclideanDistance(currentDescriptor, normalizedSaved);
-  console.log('Face match distance:', distance);
-  // Lower is more similar. 0.6 is a standard threshold for Face-API.js
-  return distance < 0.5; // Stricter for security
 }
 
 /**

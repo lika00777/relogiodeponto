@@ -105,63 +105,46 @@ export default function MyVacationsView({
       <VacationStatsDashboard stats={stats} />
 
       <div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0">
-        {/* Sidebar: Scheduled & Taken List */}
-        <div className="w-full lg:w-72 flex flex-col gap-6 shrink-0">
-          {/* Scheduled Section */}
-          <div className="flex-1 flex flex-col min-h-[250px] bg-white/[0.02] border border-white/5 p-4 rounded-[2px] backdrop-blur-md">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-accent flex items-center gap-2 mb-4">
-              <CalendarCheck className="w-4 h-4" /> Férias Agendadas
-            </h3>
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-              {scheduledVacations.length > 0 ? (
-                scheduledVacations.map((v, i) => (
-                  <div key={i} className="group relative bg-white/[0.03] border border-white/5 p-3 rounded-[1px] hover:border-accent/40 transition-all">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{v.entitlement_label || 'Período'}</span>
-                        <ChevronRight className="w-3 h-3 text-accent/40 group-hover:text-accent transition-colors" />
-                      </div>
-                      <div className="text-[11px] font-black text-white uppercase tracking-tight">
-                        {format(parseISO(v.start_date), 'dd MMM', { locale: pt })} 
-                        {v.start_date !== v.end_date && <span className="mx-1 text-white/20">/</span>}
-                        {v.start_date !== v.end_date && format(parseISO(v.end_date), 'dd MMM', { locale: pt })}
-                      </div>
-                    </div>
+        {/* Sidebar: Consolidated Vacations List */}
+        <div className="w-full lg:w-72 flex flex-col bg-white/[0.02] border border-white/5 p-4 rounded-[2px] backdrop-blur-md min-h-[500px]">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 flex items-center gap-2 mb-4 shrink-0">
+            <History className="w-4 h-4" /> Histórico & Agendamento
+          </h3>
+          
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+            <div className="space-y-px">
+              {/* TAKEN VACATIONS (FIRST) */}
+              {takenVacations.map((v, i) => (
+                <div key={`taken-${i}`} className="flex items-center justify-between py-1.5 px-2 border-b border-white/5 last:border-0 opacity-60 hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Check className="w-3 h-3 text-white/40 shrink-0" />
+                    <span className="text-[10px] font-bold text-white/60 uppercase tracking-tight truncate">
+                      {format(parseISO(v.start_date), 'dd MMM')}
+                      {v.start_date !== v.end_date && ` — ${format(parseISO(v.end_date), 'dd MMM')}`}
+                    </span>
                   </div>
-                ))
-              ) : (
-                <div className="flex-1 flex items-center justify-center border border-dashed border-white/5 rounded-[1px] p-6 text-center">
-                  <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/10 italic">Nenhum agendamento futuro</span>
+                  <span className="text-[7px] font-black text-white/30 uppercase tracking-widest shrink-0 ml-2">{v.entitlement_label || 'GOZADO'}</span>
                 </div>
-              )}
-            </div>
-          </div>
+              ))}
 
-          {/* Taken Section */}
-          <div className="flex-1 flex flex-col min-h-[250px] bg-white/[0.02] border border-white/5 p-4 rounded-[2px] backdrop-blur-md">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 flex items-center gap-2 mb-4">
-              <History className="w-4 h-4" /> Férias Gozadas
-            </h3>
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
-              {takenVacations.length > 0 ? (
-                takenVacations.map((v, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 opacity-60 hover:opacity-100 transition-opacity">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-white uppercase tracking-tight">
-                        {format(parseISO(v.start_date), 'dd MMM')}
-                        {v.start_date !== v.end_date && ` - ${format(parseISO(v.end_date), 'dd MMM')}`}
-                      </span>
-                      <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">{v.entitlement_label || 'FÉRIAS'}</span>
-                    </div>
-                    {/* Optional: mark as finished */}
-                    <div className="w-4 h-4 rounded-full border border-white/10 flex items-center justify-center">
-                      <Check className="w-2 h-2 text-white/20" />
-                    </div>
+              {/* SCHEDULED VACATIONS (SECOND) */}
+              {scheduledVacations.map((v, i) => (
+                <div key={`sched-${i}`} className="flex items-center justify-between py-2 px-2 border-b border-white/5 last:border-0 bg-white/[0.01] hover:bg-white/[0.03] transition-colors border-l-2 border-l-accent/40">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CalendarCheck className="w-3 h-3 text-accent shrink-0" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-tight truncate">
+                      {format(parseISO(v.start_date), 'dd MMM')}
+                      {v.start_date !== v.end_date && ` — ${format(parseISO(v.end_date), 'dd MMM')}`}
+                    </span>
                   </div>
-                ))
-              ) : (
-                <div className="flex-1 flex items-center justify-center border border-dashed border-white/5 rounded-[1px] p-6 text-center">
-                  <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/10 italic">Sem histórico este ano</span>
+                  <span className="text-[7px] font-black text-accent/40 uppercase tracking-widest shrink-0 ml-2">{v.entitlement_label || 'AGENDADO'}</span>
+                </div>
+              ))}
+
+              {requests.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 border border-dashed border-white/5 rounded-[1px] opacity-20">
+                  <AlertCircle className="w-5 h-5 mb-2" />
+                  <span className="text-[8px] font-black uppercase tracking-[0.2em]">Sem registos</span>
                 </div>
               )}
             </div>
